@@ -83,9 +83,8 @@ KOBIS API 기반으로 자동 업데이트된 **주간 박스오피스 TOP 10**�
 
 ✅ 데이터 출처: [KOBIS 영화관입장권통합전산망](https://www.kobis.or.kr)
 """
-    print(readme_content)
-    # with open(README_PATH, "w", encoding="utf-8") as file:
-    #     file.write(readme_content)
+    with open(README_PATH, "w", encoding="utf-8") as file:
+        file.write(readme_content)
 
 
 if __name__ == "__main__":
