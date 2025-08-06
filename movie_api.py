@@ -17,8 +17,22 @@ TARGET_DATE = one_week_ago.strftime("%Y%m%d")
 URL = f"http://kobis.or.kr/kobisopenapi/webservice/rest/boxoffice/searchWeeklyBoxOfficeList.json?key={API_KEY}&targetDt={TARGET_DATE}&weekGb=0"
 
 
+def format_rank_change(rank_inten, rank_old_and_new):
+    """순위 변화 표시: 증가 ▲, 감소 ▼, 신규 NEW"""
+    if rank_old_and_new == "NEW":
+        return "🆕 NEW"
+    try:
+        inten = int(rank_inten)
+    except:
+        return ""
+    if inten > 0:
+        return f"▲{inten}"
+    elif inten < 0:
+        return f"▼{abs(inten)}"
+    else:
+        return "-"
+
 def get_movie_info():
-    """영화진흥위원회 API를 호출하여 주간 상영영화 정보를 가져옴"""
     response = requests.get(URL)
     if response.status_code != 200:
         print("API 요청 실패:", response.status_code)
@@ -30,15 +44,15 @@ def get_movie_info():
     boxoffice_type = box_office["boxofficeType"]
     movies = box_office["weeklyBoxOfficeList"]
 
-    # ✅ 영화 리스트를 딕셔너리로 정리
     movie_list = []
-    for movie in movies:
+    for m in movies:
         movie_list.append({
-            "rank": movie["rank"],
-            "name": movie["movieNm"],
-            "open_date": movie["openDt"],
-            "audi_acc": f"{int(movie['audiAcc']):,}",
-            "sales_share": movie["salesShare"] + "%"
+            "rank": m["rank"],
+            "rank_change": format_rank_change(m["rankInten"], m["rankOldAndNew"]),
+            "name": m["movieNm"],
+            "open_date": m["openDt"],
+            "audi_acc": f"{int(m['audiAcc']):,}",
+            "sales_share": m["salesShare"] + "%",
         })
 
     return {
@@ -47,9 +61,7 @@ def get_movie_info():
         "movies": movie_list
     }
 
-
 def update_readme():
-    """README.md 파일을 업데이트"""
     info = get_movie_info()
     if not info:
         return
@@ -58,15 +70,18 @@ def update_readme():
     boxoffice_type = info["boxoffice_type"]
     movies = info["movies"]
 
-    # ✅ 표 헤더
-    table_header = "| 순위 | 영화명 | 개봉일 | 누적 관객수 | 매출 점유율 |\n|------|--------|--------|-------------|--------------|\n"
+    table_header = (
+        "| 순위 | 변동 | 영화명 | 개봉일 | 누적 관객수 | 매출 점유율 |\n"
+        "|------|-------|--------|--------|-------------|--------------|\n"
+    )
 
-    # ✅ 표 데이터
     table_rows = ""
     for movie in movies:
-        table_rows += f"| {movie['rank']} | {movie['name']} | {movie['open_date']} | {movie['audi_acc']} | {movie['sales_share']} |\n"
+        table_rows += (
+            f"| {movie['rank']} | {movie['rank_change']} | {movie['name']} | "
+            f"{movie['open_date']} | {movie['audi_acc']} | {movie['sales_share']} |\n"
+        )
 
-    # ✅ README 콘텐츠
     readme_content = f"""
 # 🎬 {boxoffice_type} ({show_range})
 
@@ -83,6 +98,7 @@ KOBIS API 기반으로 자동 업데이트된 **주간 박스오피스 TOP 10**�
 
 ✅ 데이터 출처: [KOBIS 영화관입장권통합전산망](https://www.kobis.or.kr)
 """
+
     with open(README_PATH, "w", encoding="utf-8") as file:
         file.write(readme_content)
 
